@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   LayoutDashboard,
@@ -23,6 +23,7 @@ import {
 } from './data/presets';
 import { calculate, forecast, validate } from './engine/calculate';
 import type { Scenario, Domain } from './engine/types';
+import { registerAgentBridge } from './agent/webmcp';
 import OverviewPage from './pages/OverviewPage';
 
 const WorkloadsPage = lazy(() => import('./pages/WorkloadsPage'));
@@ -91,6 +92,39 @@ export default function App() {
   const errors = useMemo(() => validate(s), [s]);
   const r = useMemo(() => calculate(s), [s]);
   const points = useMemo(() => forecast(s), [s]);
+
+  const bridgeRef = useRef({
+    scenario: s,
+    results: r,
+    forecast: points,
+    errors,
+    page,
+    advanced,
+    savedNames: saved.map((x) => x.name),
+  });
+  bridgeRef.current = {
+    scenario: s,
+    results: r,
+    forecast: points,
+    errors,
+    page,
+    advanced,
+    savedNames: saved.map((x) => x.name),
+  };
+
+  useEffect(() => {
+    return registerAgentBridge({
+      getSnapshot: () => bridgeRef.current,
+      setScenario: (next) => setS(next),
+      setPage: (nextPage) => setPageSafe(nextPage),
+      setAdvanced: (nextAdv) => setAdvanced(nextAdv),
+      saveCurrent: () => setSaved((v) => [...v, structuredClone(bridgeRef.current.scenario)]),
+      reset: () => {
+        setS(makeScenario());
+        setForecastName('Competitive market');
+      },
+    });
+  }, []);
 
   const update = (fn: (v: Scenario) => void) =>
     setS((old) => {
