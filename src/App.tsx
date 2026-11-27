@@ -19,6 +19,7 @@ import {
   suggestedDomains,
   applyMaturity,
   applySupplyStrategy,
+  applyPricePreset,
 } from './data/presets';
 import { calculate, forecast, validate } from './engine/calculate';
 import type { Scenario, Domain } from './engine/types';
@@ -48,6 +49,7 @@ function migrateScenario(value: Scenario): Scenario {
   x.enableSelfHosted ??= false;
   x.enableStudentModels ??= false;
   x.globalPriceAdjustment ??= 1;
+  x.pricePreset ??= 'Generic baseline';
   return x;
 }
 
@@ -120,6 +122,7 @@ export default function App() {
 
   const setMaturity = (level: number) => setS((old) => applyMaturity(old, level));
   const setStrategy = (strategy: string) => setS((old) => applySupplyStrategy(old, strategy));
+  const setPricePreset = (presetName: string) => setS((old) => applyPricePreset(old, presetName));
 
   const handleImport = (file: File) => {
     const reader = new FileReader();
@@ -156,6 +159,7 @@ export default function App() {
             onIndustry={setIndustry}
             onMaturity={setMaturity}
             onStrategy={setStrategy}
+            onPricePreset={setPricePreset}
             onNavigate={setPageSafe}
           />
         );
@@ -186,6 +190,7 @@ export default function App() {
             advanced={advanced}
             onEnableAdvanced={() => setAdvanced(true)}
             onStrategy={setStrategy}
+            onPricePreset={setPricePreset}
             onUpdate={update}
             onSetDomain={setDomain}
           />

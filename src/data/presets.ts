@@ -1,4 +1,4 @@
-import type { Scenario, Enterprise, Domain, DomainKey, Complexity, Routing, Forecast } from '../engine/types';
+import type { Scenario, Enterprise, Domain, DomainKey, Complexity, Routing, Forecast, Price } from '../engine/types';
 
 export const profiles: Record<string, Enterprise> = {
   Medium: {
@@ -62,6 +62,265 @@ export const SUPPLY_STRATEGIES = [
   'Hybrid cloud & self-hosted',
   'Enterprise student models',
 ] as const;
+
+export interface PricePreset {
+  description: string;
+  globalPriceAdjustment: number;
+  defaultCacheWrite: number;
+  prices: Record<'frontier' | 'mid' | 'light', Price>;
+}
+
+export const pricePresets: Record<string, PricePreset> = {
+  'Generic baseline': {
+    description: 'Generic 5:1 baseline ($8/$40, $1/$5, $0.10/$0.50; 50% cache discount, $0 cache write).',
+    globalPriceAdjustment: 1,
+    defaultCacheWrite: 0,
+    prices: {
+      frontier: {
+        provider: 'Scenario assumption',
+        id: 'Generic frontier',
+        tier: 'frontier',
+        input: 8,
+        output: 40,
+        cached: 4,
+        cacheWrite: 0,
+        region: 'Global (illustrative)',
+        date: 'Not applicable',
+        source: '',
+        status: 'illustrative',
+      },
+      mid: {
+        provider: 'Scenario assumption',
+        id: 'Generic mid-tier',
+        tier: 'mid',
+        input: 1,
+        output: 5,
+        cached: 0.5,
+        cacheWrite: 0,
+        region: 'Global (illustrative)',
+        date: 'Not applicable',
+        source: '',
+        status: 'illustrative',
+      },
+      light: {
+        provider: 'Scenario assumption',
+        id: 'Generic lightweight',
+        tier: 'light',
+        input: 0.1,
+        output: 0.5,
+        cached: 0.05,
+        cacheWrite: 0,
+        region: 'Global (illustrative)',
+        date: 'Not applicable',
+        source: '',
+        status: 'illustrative',
+      },
+    },
+  },
+  'AWS Bedrock (Claude 5.5)': {
+    description:
+      'AWS Bedrock Claude 5.5 on-demand rates with 90–95% cache read discount and 1.25× 5-min cache write.',
+    globalPriceAdjustment: 1,
+    defaultCacheWrite: 0.05,
+    prices: {
+      frontier: {
+        provider: 'AWS Bedrock',
+        id: 'Claude Opus 5.5',
+        tier: 'frontier',
+        input: 4,
+        output: 20,
+        cached: 0.2,
+        cacheWrite: 5,
+        region: 'Global on-demand',
+        date: '2026-11',
+        source: 'https://aws.amazon.com/bedrock/pricing/',
+        status: 'verified',
+      },
+      mid: {
+        provider: 'AWS Bedrock',
+        id: 'Claude Sonnet 5.5',
+        tier: 'mid',
+        input: 2,
+        output: 10,
+        cached: 0.1,
+        cacheWrite: 2.5,
+        region: 'Global on-demand',
+        date: '2026-11',
+        source: 'https://aws.amazon.com/bedrock/pricing/',
+        status: 'verified',
+      },
+      light: {
+        provider: 'AWS Bedrock',
+        id: 'Claude Haiku 5.5 (<100K)',
+        tier: 'light',
+        input: 0.1,
+        output: 0.5,
+        cached: 0.01,
+        cacheWrite: 0.125,
+        region: 'Global on-demand',
+        date: '2026-11',
+        source: 'https://aws.amazon.com/bedrock/pricing/',
+        status: 'verified',
+      },
+    },
+  },
+  'OpenRouter (Claude 5.5)': {
+    description: 'Claude 5.5 rates via OpenRouter with 1.05× (~5%) platform credit-fee adjustment.',
+    globalPriceAdjustment: 1.05,
+    defaultCacheWrite: 0.05,
+    prices: {
+      frontier: {
+        provider: 'OpenRouter',
+        id: 'Claude Opus 5.5',
+        tier: 'frontier',
+        input: 4,
+        output: 20,
+        cached: 0.2,
+        cacheWrite: 5,
+        region: 'Multi-provider',
+        date: '2026-11',
+        source: 'https://openrouter.ai/models',
+        status: 'verified',
+      },
+      mid: {
+        provider: 'OpenRouter',
+        id: 'Claude Sonnet 5.5',
+        tier: 'mid',
+        input: 2,
+        output: 10,
+        cached: 0.1,
+        cacheWrite: 2.5,
+        region: 'Multi-provider',
+        date: '2026-11',
+        source: 'https://openrouter.ai/models',
+        status: 'verified',
+      },
+      light: {
+        provider: 'OpenRouter',
+        id: 'Claude Haiku 5.5 (<100K)',
+        tier: 'light',
+        input: 0.1,
+        output: 0.5,
+        cached: 0.01,
+        cacheWrite: 0.125,
+        region: 'Multi-provider',
+        date: '2026-11',
+        source: 'https://openrouter.ai/models',
+        status: 'verified',
+      },
+    },
+  },
+  'OpenRouter (Value mix)': {
+    description:
+      'Multi-provider value mix (Opus 5.5 + Gemini 3.8 Flash + DeepSeek V4 Flash) with 1.05× OpenRouter fee.',
+    globalPriceAdjustment: 1.05,
+    defaultCacheWrite: 0.05,
+    prices: {
+      frontier: {
+        provider: 'OpenRouter',
+        id: 'Claude Opus 5.5',
+        tier: 'frontier',
+        input: 4,
+        output: 20,
+        cached: 0.2,
+        cacheWrite: 5,
+        region: 'Multi-provider',
+        date: '2026-11',
+        source: 'https://openrouter.ai/models',
+        status: 'verified',
+      },
+      mid: {
+        provider: 'OpenRouter',
+        id: 'Gemini 3.8 Flash',
+        tier: 'mid',
+        input: 0.75,
+        output: 3.75,
+        cached: 0.075,
+        cacheWrite: 0.75,
+        region: 'Multi-provider',
+        date: '2026-11',
+        source: 'https://openrouter.ai/models',
+        status: 'verified',
+      },
+      light: {
+        provider: 'OpenRouter',
+        id: 'DeepSeek V4 Flash',
+        tier: 'light',
+        input: 0.1,
+        output: 0.4,
+        cached: 0.01,
+        cacheWrite: 0.1,
+        region: 'Multi-provider',
+        date: '2026-11',
+        source: 'https://openrouter.ai/models',
+        status: 'verified',
+      },
+    },
+  },
+  'OpenAI (GPT-6.2 stack)': {
+    description:
+      'OpenAI GPT-6.2 Astra / Sol / Luna API rates with 90–95% cache read discount and 1.25× cache write.',
+    globalPriceAdjustment: 1,
+    defaultCacheWrite: 0.05,
+    prices: {
+      frontier: {
+        provider: 'OpenAI',
+        id: 'GPT-6.2 Astra',
+        tier: 'frontier',
+        input: 8,
+        output: 40,
+        cached: 0.4,
+        cacheWrite: 10,
+        region: 'Global API',
+        date: '2026-11',
+        source: 'https://openai.com/api/pricing/',
+        status: 'verified',
+      },
+      mid: {
+        provider: 'OpenAI',
+        id: 'GPT-6.2 Sol',
+        tier: 'mid',
+        input: 2,
+        output: 10,
+        cached: 0.1,
+        cacheWrite: 2.5,
+        region: 'Global API',
+        date: '2026-11',
+        source: 'https://openai.com/api/pricing/',
+        status: 'verified',
+      },
+      light: {
+        provider: 'OpenAI',
+        id: 'GPT-6 Luna',
+        tier: 'light',
+        input: 0.1,
+        output: 0.5,
+        cached: 0.01,
+        cacheWrite: 0.125,
+        region: 'Global API',
+        date: '2026-11',
+        source: 'https://openai.com/api/pricing/',
+        status: 'verified',
+      },
+    },
+  },
+};
+
+export const PRICE_PRESETS = Object.keys(pricePresets);
+
+export function applyPricePreset(s: Scenario, presetName: string): Scenario {
+  const preset = pricePresets[presetName];
+  if (!preset) return s;
+  const next = structuredClone(s);
+  next.pricePreset = presetName;
+  next.prices.frontier = structuredClone(preset.prices.frontier);
+  next.prices.mid = structuredClone(preset.prices.mid);
+  next.prices.light = structuredClone(preset.prices.light);
+  next.globalPriceAdjustment = preset.globalPriceAdjustment;
+  next.execution.cacheWrite =
+    preset.defaultCacheWrite > 0 ? Math.min(preset.defaultCacheWrite, next.execution.cache) : 0;
+  return next;
+}
 
 const labels: Record<DomainKey, string> = {
   engineering: 'Software engineering',
@@ -197,6 +456,7 @@ export function makeScenario(preset = 'Medium'): Scenario {
     globalPriceAdjustment: 1,
     name: `${preset} enterprise · Tiered`,
     preset,
+    pricePreset: 'Generic baseline',
     industry: 'General enterprise',
     maturity: 2,
     strategy: 'Tiered routing',
@@ -217,45 +477,7 @@ export function makeScenario(preset = 'Medium'): Scenario {
       runtimePerSkill: 0.0005,
     },
     prices: {
-      frontier: {
-        provider: 'Scenario assumption',
-        id: 'Generic frontier',
-        tier: 'frontier',
-        input: 8,
-        output: 40,
-        cached: 4,
-        cacheWrite: 0,
-        region: 'Global (illustrative)',
-        date: 'Not applicable',
-        source: '',
-        status: 'illustrative',
-      },
-      mid: {
-        provider: 'Scenario assumption',
-        id: 'Generic mid-tier',
-        tier: 'mid',
-        input: 1,
-        output: 5,
-        cached: 0.5,
-        cacheWrite: 0,
-        region: 'Global (illustrative)',
-        date: 'Not applicable',
-        source: '',
-        status: 'illustrative',
-      },
-      light: {
-        provider: 'Scenario assumption',
-        id: 'Generic lightweight',
-        tier: 'light',
-        input: 0.1,
-        output: 0.5,
-        cached: 0.05,
-        cacheWrite: 0,
-        region: 'Global (illustrative)',
-        date: 'Not applicable',
-        source: '',
-        status: 'illustrative',
-      },
+      ...structuredClone(pricePresets['Generic baseline'].prices),
       self: {
         provider: 'User capacity model',
         id: 'Self-hosted open weight',

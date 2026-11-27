@@ -69,8 +69,18 @@ export default function MethodologyPage() {
                 <td>Generic model tiers</td>
                 <td>Illustrative assumption</td>
                 <td>
-                  Frontier $8/$40, mid $1/$5, lightweight $0.10/$0.50 per million input/output tokens. Not vendor
-                  prices; no verified external pricing is loaded.
+                  Frontier $8/$40, mid $1/$5, lightweight $0.10/$0.50 per million input/output tokens (50% cache
+                  discount, $0 cache write). Synthetic 5:1 baseline; not vendor quotes.
+                </td>
+              </tr>
+              <tr>
+                <td>Reference provider catalogues</td>
+                <td>Reference snapshot (2026-11)</td>
+                <td>
+                  AWS Bedrock Claude 5.5 ($4/$20, $2/$10, $0.10/$0.50), OpenRouter Claude 5.5 &amp; Value
+                  multi-provider mix (Opus 5.5 + Gemini 3.8 Flash + DeepSeek V4 Flash with 1.05× fee), and OpenAI
+                  GPT-6.2 ($8/$40, $2/$10, $0.10/$0.50), with 90–95% cache read discounts and 1.25× 5-min cache
+                  writes.
                 </td>
               </tr>
               <tr>
@@ -109,8 +119,10 @@ export default function MethodologyPage() {
           not predictions.
         </p>
         <p>
-          Default prices have no provider identifier, official source URL or verified pricing date because they are
-          hypothetical. Add verified pricing only when supported by official source URLs and dated evidence. No
+          Generic baseline prices have no provider identifier, official source URL or verified pricing date because they
+          are hypothetical. Reference provider catalogues (AWS Bedrock, OpenRouter, OpenAI) are point-in-time
+          snapshots and should be verified against live provider pricing pages before procurement. Long-context
+          pricing cliffs (&gt;100K tokens) and Gemini hourly cache storage fees are not separately modeled. No
           external benchmark expenditure is represented.
         </p>
       </Panel>

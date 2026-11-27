@@ -380,10 +380,7 @@ export function sensitivity(s: Scenario) {
     [
       'Model prices',
       (x) => {
-        for (const p of Object.values(x.prices)) {
-          p.input *= 1.2;
-          p.output *= 1.2;
-        }
+        x.globalPriceAdjustment *= 1.2;
       },
     ],
     ['Agent adoption', (x) => x.domains.forEach((d) => (d.adoption = Math.min(1, d.adoption * 1.2)))],

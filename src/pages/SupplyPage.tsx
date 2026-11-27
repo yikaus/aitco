@@ -1,5 +1,5 @@
 import type { Scenario, Results, Domain, Complexity, Tier } from '../engine/types';
-import { SUPPLY_STRATEGIES } from '../data/presets';
+import { SUPPLY_STRATEGIES, PRICE_PRESETS, pricePresets } from '../data/presets';
 import { hostingEconomics, distillationEconomics, rebalanceRouting } from '../engine/calculate';
 import {
   Heading,
@@ -18,6 +18,7 @@ interface SupplyPageProps {
   advanced: boolean;
   onEnableAdvanced: () => void;
   onStrategy: (strategy: string) => void;
+  onPricePreset: (preset: string) => void;
   onUpdate: (fn: (v: Scenario) => void) => void;
   onSetDomain: (index: number, fn: (d: Domain) => void) => void;
 }
@@ -43,6 +44,7 @@ export default function SupplyPage({
   advanced,
   onEnableAdvanced,
   onStrategy,
+  onPricePreset,
   onUpdate,
   onSetDomain,
 }: SupplyPageProps) {
@@ -106,6 +108,29 @@ export default function SupplyPage({
           <div className="range-ends">
             <span>0.1× · 90% lower</span>
             <span>3.0× · 200% higher</span>
+          </div>
+          <div className="maturity" style={{ marginTop: 12 }}>
+            {(
+              [
+                ['Batch API (0.50×)', 0.5],
+                ['Baseline (1.00×)', 1],
+                ['OpenRouter fee (1.05×)', 1.05],
+                ['AWS regional (1.10×)', 1.1],
+              ] as const
+            ).map(([label, val]) => (
+              <button
+                type="button"
+                key={label}
+                className={`choice ${Math.abs(s.globalPriceAdjustment - val) < 0.001 ? 'selected' : ''}`}
+                onClick={() =>
+                  onUpdate((v) => {
+                    v.globalPriceAdjustment = val;
+                  })
+                }
+              >
+                {label}
+              </button>
+            ))}
           </div>
           <p>
             Adjusts input, output, cached-input and cache-write prices equally, preserving relative tier premiums.
@@ -274,8 +299,23 @@ export default function SupplyPage({
 
       <Panel
         title="Model price catalogue"
-        subtitle="Generic scenario assumptions in USD per 1M tokens. These are not vendor quotations."
+        subtitle="Choose a reference provider catalogue (AWS Bedrock, OpenRouter, OpenAI) or generic baseline in USD per 1M tokens, or edit any cell."
       >
+        <div className="maturity" style={{ marginBottom: 10 }}>
+          {PRICE_PRESETS.map((name) => (
+            <button
+              type="button"
+              key={name}
+              className={`choice ${(s.pricePreset ?? 'Generic baseline') === name ? 'selected' : ''}`}
+              onClick={() => onPricePreset(name)}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+        <p className="muted" style={{ marginTop: 0, marginBottom: 14 }}>
+          {pricePresets[s.pricePreset ?? 'Generic baseline']?.description ?? 'Custom edited token rates.'}
+        </p>
         <div className="table-wrap">
           <table>
             <thead>
@@ -293,7 +333,7 @@ export default function SupplyPage({
                   <td>
                     <strong>{s.prices[t].id}</strong>
                     <small>
-                      {s.prices[t].status} · {s.prices[t].region} · {s.prices[t].date}
+                      {s.prices[t].provider} · {s.prices[t].status} · {s.prices[t].region} · {s.prices[t].date}
                     </small>
                   </td>
                   {(['input', 'output', 'cached', 'cacheWrite'] as const).map((k) => (
@@ -304,6 +344,7 @@ export default function SupplyPage({
                         onChange={(n) =>
                           onUpdate((v) => {
                             v.prices[t][k] = n;
+                            v.pricePreset = 'Custom';
                           })
                         }
                       />
@@ -315,6 +356,15 @@ export default function SupplyPage({
             </tbody>
           </table>
         </div>
+        <Details title="Real-world billing notes (Bedrock, OpenRouter, caching)">
+          <p>
+            AWS Bedrock and Anthropic bill cache reads at 0.05×–0.10× (90–95% off) and cache writes at 1.25× (5-min
+            TTL) or 2.0× (1-hr TTL) base input. OpenRouter adds a ~5% platform credit fee (1.05×); AWS Bedrock
+            US-only regional inference adds 1.10×; async Batch APIs reduce rates by 50% (0.50×). Long-context calls
+            (&gt;100K tokens) may cross higher pricing tiers not separately modeled here, and thinking/reasoning
+            tokens are billed at output rates.
+          </p>
+        </Details>
       </Panel>
 
       <details className="advanced-supply" open={advanced}>

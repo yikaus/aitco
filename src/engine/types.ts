@@ -151,6 +151,7 @@ export interface Scenario {
   globalPriceAdjustment: number;
   name: string;
   preset: string;
+  pricePreset?: string;
   industry: string;
   maturity: number;
   strategy: string;

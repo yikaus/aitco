@@ -13,7 +13,7 @@ import {
   Legend,
 } from 'recharts';
 import type { Scenario, Results, ForecastPoint } from '../engine/types';
-import { profiles, industries, MATURITY_LEVELS, SUPPLY_STRATEGIES } from '../data/presets';
+import { profiles, industries, MATURITY_LEVELS, SUPPLY_STRATEGIES, PRICE_PRESETS } from '../data/presets';
 import { Panel, Metric, Details, SelectField, money, num, pct } from '../components/Fields';
 import { ChartBox, CHART_COLORS } from '../components/ChartBox';
 
@@ -25,6 +25,7 @@ interface OverviewPageProps {
   onIndustry: (industry: string) => void;
   onMaturity: (level: number) => void;
   onStrategy: (strategy: string) => void;
+  onPricePreset: (preset: string) => void;
   onNavigate: (page: string) => void;
 }
 
@@ -36,6 +37,7 @@ export default function OverviewPage({
   onIndustry,
   onMaturity,
   onStrategy,
+  onPricePreset,
   onNavigate,
 }: OverviewPageProps) {
   const inferenceShare = r.monthlyTco > 0 ? r.inference / r.monthlyTco : 0;
@@ -70,7 +72,7 @@ export default function OverviewPage({
 
       <Panel
         title="Quick scenario setup"
-        subtitle="Adjust these four high-level levers for an immediate estimate — all charts and metrics update live."
+        subtitle="Adjust these high-level levers for an immediate estimate — all charts and metrics update live."
       >
         <div className="field-grid">
           <SelectField label="Enterprise size" value={s.preset} options={Object.keys(profiles)} onChange={onPreset} />
@@ -98,6 +100,14 @@ export default function OverviewPage({
             }
             options={SUPPLY_STRATEGIES}
             onChange={onStrategy}
+          />
+          <SelectField
+            label="Pricing catalogue"
+            value={s.pricePreset ?? 'Generic baseline'}
+            options={s.pricePreset === 'Custom' ? [...PRICE_PRESETS, 'Custom'] : PRICE_PRESETS}
+            onChange={(p) => {
+              if (p !== 'Custom') onPricePreset(p);
+            }}
           />
         </div>
       </Panel>
@@ -232,8 +242,9 @@ export default function OverviewPage({
             )}
             <p>
               <strong>Active assumptions.</strong> {s.preset} enterprise · {s.industry} ·{' '}
-              {MATURITY_LEVELS[s.maturity]} · {s.strategy} · {pct(s.execution.deterministic)} deterministic
-              skills · {s.globalPriceAdjustment.toFixed(2)}× token price factor.
+              {MATURITY_LEVELS[s.maturity]} · {s.strategy} · {s.pricePreset ?? 'Generic baseline'} ·{' '}
+              {pct(s.execution.deterministic)} deterministic skills · {s.globalPriceAdjustment.toFixed(2)}× token
+              price factor.
             </p>
             <p>
               <strong>Illustrative &amp; browser-local.</strong> Synthetic starting assumptions, not vendor
