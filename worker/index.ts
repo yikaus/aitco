@@ -1,10 +1,12 @@
 import {
   type ScenarioInput,
+  compareProviderMatrix,
   compareScenarios,
   evaluateScenario,
   getLlmsTxt,
   getOpenApiSpec,
   getPresetsCatalog,
+  getStandardScenariosMatrix,
 } from '../src/engine/agentApi';
 
 export interface Env {
@@ -15,20 +17,42 @@ export interface Env {
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-const ENDPOINTS = ['/llms.txt', '/openapi.json', '/api/health', '/api/presets', '/api/calculate', '/api/compare'];
+const ENDPOINTS = [
+  '/robots.txt',
+  '/llms.txt',
+  '/openapi.json',
+  '/presets.json',
+  '/scenarios.json',
+  '/estimate.json',
+  '/compare.json',
+  '/api/health',
+  '/api/presets',
+  '/api/calculate',
+  '/api/compare',
+];
 
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      ...CORS_HEADERS,
-    },
-  });
+function respond(
+  request: Request,
+  body: string,
+  status = 200,
+  contentType = 'application/json; charset=utf-8'
+): Response {
+  const headers = {
+    'Content-Type': contentType,
+    ...CORS_HEADERS,
+  };
+  if (request.method === 'HEAD') {
+    return new Response(null, { status, headers });
+  }
+  return new Response(body, { status, headers });
+}
+
+function json(request: Request, data: unknown, status = 200): Response {
+  return respond(request, JSON.stringify(data, null, 2), status, 'application/json; charset=utf-8');
 }
 
 function parseBool(value: string | null): boolean | undefined {
@@ -89,42 +113,65 @@ function parseQueryCalculate(url: URL) {
 export async function handleRequest(request: Request, env?: Env): Promise<Response> {
   const url = new URL(request.url);
   const { pathname } = url;
+  const isRead = request.method === 'GET' || request.method === 'HEAD';
 
   const isAgentRoute =
-    pathname.startsWith('/api/') || pathname === '/openapi.json' || pathname === '/llms.txt';
+    pathname.startsWith('/api/') ||
+    pathname === '/openapi.json' ||
+    pathname === '/llms.txt' ||
+    pathname === '/robots.txt' ||
+    pathname === '/presets.json' ||
+    pathname === '/estimate.json' ||
+    pathname === '/compare.json' ||
+    pathname === '/scenarios.json';
 
   if (isAgentRoute && request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
 
-  if (pathname === '/llms.txt' && request.method === 'GET') {
-    return new Response(getLlmsTxt(url.origin), {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        ...CORS_HEADERS,
-      },
-    });
+  if (pathname === '/robots.txt' && isRead) {
+    return respond(request, 'User-agent: *\nAllow: /\n', 200, 'text/plain; charset=utf-8');
   }
 
-  if ((pathname === '/openapi.json' || pathname === '/api/openapi.json') && request.method === 'GET') {
-    return json(getOpenApiSpec(url.origin));
+  if (pathname === '/llms.txt' && isRead) {
+    return respond(request, getLlmsTxt(url.origin), 200, 'text/plain; charset=utf-8');
   }
 
-  if (pathname === '/api/health' && request.method === 'GET') {
-    return json({ ok: true, service: 'aitco', schemaVersion: 1, endpoints: ENDPOINTS });
+  if ((pathname === '/openapi.json' || pathname === '/api/openapi.json') && isRead) {
+    return json(request, getOpenApiSpec(url.origin));
   }
 
-  if (pathname === '/api/presets' && request.method === 'GET') {
-    return json({ ok: true, ...getPresetsCatalog() });
+  if (pathname === '/api/health' && isRead) {
+    return json(request, { ok: true, service: 'aitco', schemaVersion: 1, endpoints: ENDPOINTS });
+  }
+
+  if ((pathname === '/api/presets' || pathname === '/presets.json') && isRead) {
+    return json(request, { ok: true, ...getPresetsCatalog() });
+  }
+
+  if (pathname === '/scenarios.json' && isRead) {
+    return json(request, getStandardScenariosMatrix());
+  }
+
+  if (pathname === '/estimate.json' && isRead) {
+    const { input, includeScenario, includeSensitivity, errors } = parseQueryCalculate(url);
+    if (errors.length > 0) return json(request, { ok: false, errors }, 400);
+    const res = evaluateScenario(input, { includeScenario, includeSensitivity });
+    return json(request, res, res.ok ? 200 : 400);
+  }
+
+  if (pathname === '/compare.json' && isRead) {
+    const { input, errors } = parseQueryCalculate(url);
+    if (errors.length > 0) return json(request, { ok: false, errors }, 400);
+    return json(request, compareProviderMatrix(input), 200);
   }
 
   if (pathname === '/api/calculate') {
-    if (request.method === 'GET') {
+    if (isRead) {
       const { input, includeScenario, includeSensitivity, errors } = parseQueryCalculate(url);
-      if (errors.length > 0) return json({ ok: false, errors }, 400);
+      if (errors.length > 0) return json(request, { ok: false, errors }, 400);
       const res = evaluateScenario(input, { includeScenario, includeSensitivity });
-      return json(res, res.ok ? 200 : 400);
+      return json(request, res, res.ok ? 200 : 400);
     }
 
     if (request.method === 'POST') {
@@ -134,11 +181,11 @@ export async function handleRequest(request: Request, env?: Env): Promise<Respon
         try {
           const parsed = JSON.parse(text);
           if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            return json({ ok: false, errors: ['Request body must be a JSON object'] }, 400);
+            return json(request, { ok: false, errors: ['Request body must be a JSON object'] }, 400);
           }
           body = parsed as Record<string, unknown>;
         } catch {
-          return json({ ok: false, errors: ['Invalid JSON request body'] }, 400);
+          return json(request, { ok: false, errors: ['Invalid JSON request body'] }, 400);
         }
       }
       const { includeScenario = true, includeSensitivity = true, ...input } = body;
@@ -146,15 +193,20 @@ export async function handleRequest(request: Request, env?: Env): Promise<Respon
         includeScenario: Boolean(includeScenario),
         includeSensitivity: Boolean(includeSensitivity),
       });
-      return json(res, res.ok ? 200 : 400);
+      return json(request, res, res.ok ? 200 : 400);
     }
 
-    return json({ ok: false, error: 'Method not allowed' }, 405);
+    return json(request, { ok: false, error: 'Method not allowed' }, 405);
   }
 
   if (pathname === '/api/compare') {
+    if (isRead) {
+      const { input, errors } = parseQueryCalculate(url);
+      if (errors.length > 0) return json(request, { ok: false, errors }, 400);
+      return json(request, compareProviderMatrix(input), 200);
+    }
     if (request.method !== 'POST') {
-      return json({ ok: false, error: 'Method not allowed' }, 405);
+      return json(request, { ok: false, error: 'Method not allowed' }, 405);
     }
     let items: Array<{ label?: string } & ScenarioInput> | undefined;
     const text = await request.text();
@@ -166,21 +218,21 @@ export async function handleRequest(request: Request, env?: Env): Promise<Respon
         } else if (parsed && typeof parsed === 'object') {
           const maybeScenarios = (parsed as { scenarios?: unknown }).scenarios;
           if (maybeScenarios !== undefined && !Array.isArray(maybeScenarios)) {
-            return json({ ok: false, errors: ['scenarios must be an array'] }, 400);
+            return json(request, { ok: false, errors: ['scenarios must be an array'] }, 400);
           }
           items = maybeScenarios as Array<{ label?: string } & ScenarioInput> | undefined;
         } else {
-          return json({ ok: false, errors: ['Invalid JSON request body'] }, 400);
+          return json(request, { ok: false, errors: ['Invalid JSON request body'] }, 400);
         }
       } catch {
-        return json({ ok: false, errors: ['Invalid JSON request body'] }, 400);
+        return json(request, { ok: false, errors: ['Invalid JSON request body'] }, 400);
       }
     }
-    return json(compareScenarios(items), 200);
+    return json(request, compareScenarios(items), 200);
   }
 
   if (pathname.startsWith('/api/')) {
-    return json({ ok: false, error: 'Not found', endpoints: ENDPOINTS }, 404);
+    return json(request, { ok: false, error: 'Not found', endpoints: ENDPOINTS }, 404);
   }
 
   return env ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });

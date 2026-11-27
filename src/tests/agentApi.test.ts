@@ -154,4 +154,39 @@ describe('Cloudflare Worker handleRequest', () => {
     const notFound = await handleRequest(new Request('https://aitco.yikaus.workers.dev/api/unknown'));
     expect(notFound.status).toBe(404);
   });
+
+  it('serves browse-friendly .json endpoints, /robots.txt, and HEAD requests', async () => {
+    const robots = await handleRequest(new Request('https://aitco.yikaus.workers.dev/robots.txt'));
+    expect(robots.status).toBe(200);
+    expect(await robots.text()).toContain('Allow: /');
+
+    for (const path of [
+      '/presets.json',
+      '/scenarios.json',
+      '/estimate.json?preset=Large&maturity=3&pricePreset=AWS+Bedrock+(Claude+5.5)',
+      '/compare.json?preset=Large&maturity=3',
+      '/openapi.json',
+      '/api/presets',
+    ]) {
+      const getRes = await handleRequest(new Request(`https://aitco.yikaus.workers.dev${path}`));
+      expect(getRes.status).toBe(200);
+      expect(getRes.headers.get('content-type')).toContain('application/json');
+
+      const headRes = await handleRequest(
+        new Request(`https://aitco.yikaus.workers.dev${path}`, { method: 'HEAD' })
+      );
+      expect(headRes.status).toBe(200);
+      expect(headRes.headers.get('content-type')).toContain('application/json');
+      expect(await headRes.text()).toBe('');
+    }
+
+    const scenariosRes = await handleRequest(new Request('https://aitco.yikaus.workers.dev/scenarios.json'));
+    const scenariosJson = (await scenariosRes.json()) as {
+      ok: boolean;
+      scenarios: Array<{ ok: boolean }>;
+    };
+    expect(scenariosJson.ok).toBe(true);
+    expect(scenariosJson.scenarios.length).toBe(15);
+    expect(scenariosJson.scenarios.every((s) => s.ok)).toBe(true);
+  });
 });

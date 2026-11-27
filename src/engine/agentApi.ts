@@ -366,6 +366,170 @@ export function compareScenarios(items?: Array<{ label?: string } & ScenarioInpu
   return { ok: true as const, comparisons };
 }
 
+export function compareProviderMatrix(baseInput: ScenarioInput = {}) {
+  const base: ScenarioInput = { preset: 'Medium', ...baseInput };
+  return compareScenarios([
+    {
+      ...base,
+      label: 'Frontier only (Generic baseline)',
+      strategy: 'Frontier only',
+      pricePreset: 'Generic baseline',
+    },
+    {
+      ...base,
+      label: 'Tiered (Generic baseline)',
+      strategy: 'Tiered routing',
+      pricePreset: 'Generic baseline',
+    },
+    {
+      ...base,
+      label: 'Tiered (AWS Bedrock Claude 5.5)',
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+    },
+    {
+      ...base,
+      label: 'Tiered (OpenRouter Claude 5.5)',
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenRouter (Claude 5.5)',
+    },
+    {
+      ...base,
+      label: 'Tiered (OpenRouter Value mix)',
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenRouter (Value mix)',
+    },
+    {
+      ...base,
+      label: 'Tiered (OpenAI GPT-6.2 stack)',
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenAI (GPT-6.2 stack)',
+    },
+  ]);
+}
+
+export function getStandardScenariosMatrix() {
+  const { comparisons } = compareScenarios([
+    {
+      label: 'Medium L2 · Frontier only (Generic baseline)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Frontier only',
+      pricePreset: 'Generic baseline',
+    },
+    {
+      label: 'Medium L2 · Tiered (Generic baseline)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Tiered routing',
+      pricePreset: 'Generic baseline',
+    },
+    {
+      label: 'Medium L2 · Tiered (AWS Bedrock Claude 5.5)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+    },
+    {
+      label: 'Medium L2 · Tiered (OpenRouter Claude 5.5)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenRouter (Claude 5.5)',
+    },
+    {
+      label: 'Medium L2 · Tiered (OpenRouter Value mix)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenRouter (Value mix)',
+    },
+    {
+      label: 'Medium L2 · Tiered (OpenAI GPT-6.2 stack)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenAI (GPT-6.2 stack)',
+    },
+    {
+      label: 'Medium L2 · Optimised architecture (AWS Bedrock Claude 5.5)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+      execution: { deterministic: 0.4, cache: 0.5, reuse: 0.25, optimisation: 0.25 },
+    },
+    {
+      label: 'Medium L2 · Rebound stress test (AWS Bedrock, Rapid commoditisation)',
+      preset: 'Medium',
+      maturity: 2,
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+      forecastPreset: 'Rapid commoditisation',
+    },
+    {
+      label: 'Large L3 · Frontier only (Generic baseline)',
+      preset: 'Large',
+      maturity: 3,
+      strategy: 'Frontier only',
+      pricePreset: 'Generic baseline',
+    },
+    {
+      label: 'Large L3 · Tiered (AWS Bedrock Claude 5.5)',
+      preset: 'Large',
+      maturity: 3,
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+    },
+    {
+      label: 'Large L3 · Tiered (OpenRouter Value mix)',
+      preset: 'Large',
+      maturity: 3,
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenRouter (Value mix)',
+    },
+    {
+      label: 'Large L3 · Tiered (OpenAI GPT-6.2 stack)',
+      preset: 'Large',
+      maturity: 3,
+      strategy: 'Tiered routing',
+      pricePreset: 'OpenAI (GPT-6.2 stack)',
+    },
+    {
+      label: 'Large L3 · Rebound stress test (AWS Bedrock, Rapid commoditisation)',
+      preset: 'Large',
+      maturity: 3,
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+      forecastPreset: 'Rapid commoditisation',
+    },
+    {
+      label: 'Global L3 · Tiered (AWS Bedrock, Competitive market)',
+      preset: 'Global',
+      maturity: 3,
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+      forecastPreset: 'Competitive market',
+    },
+    {
+      label: 'Global L3 · Rebound stress test (AWS Bedrock, Rapid commoditisation)',
+      preset: 'Global',
+      maturity: 3,
+      strategy: 'Tiered routing',
+      pricePreset: 'AWS Bedrock (Claude 5.5)',
+      forecastPreset: 'Rapid commoditisation',
+    },
+  ]);
+
+  return {
+    ok: true as const,
+    generatedFrom: 'deterministic-engine-v1',
+    note: 'Live calculations from current simulator model; illustrative estimates, not vendor quotes.',
+    scenarios: comparisons,
+  };
+}
+
 export function getPresetsCatalog() {
   return {
     schemaVersion: 1,
@@ -393,6 +557,60 @@ export function getOpenApiSpec(origin: string) {
     },
     servers: [{ url: origin }],
     paths: {
+      '/presets.json': {
+        get: {
+          summary: 'Browse-friendly preset catalog (enterprise sizes, industries, maturity, strategies, pricing)',
+          responses: { '200': { description: 'Catalog of valid input presets and defaults' } },
+        },
+      },
+      '/scenarios.json': {
+        get: {
+          summary: 'Browse-friendly matrix of 15 pre-computed real-world & rebound scenarios',
+          responses: { '200': { description: 'Calculated scenario matrix with summary and year-5 forecast' } },
+        },
+      },
+      '/estimate.json': {
+        get: {
+          summary: 'Browse-friendly single scenario calculation from query parameters',
+          parameters: [
+            { name: 'preset', in: 'query', schema: { type: 'string', enum: Object.keys(profiles) } },
+            { name: 'industry', in: 'query', schema: { type: 'string', enum: Object.keys(industries) } },
+            { name: 'maturity', in: 'query', schema: { type: 'integer', minimum: 0, maximum: 4 } },
+            { name: 'strategy', in: 'query', schema: { type: 'string', enum: [...SUPPLY_STRATEGIES] } },
+            { name: 'pricePreset', in: 'query', schema: { type: 'string', enum: PRICE_PRESETS } },
+            {
+              name: 'forecastPreset',
+              in: 'query',
+              schema: { type: 'string', enum: Object.keys(forecastPresets) },
+            },
+            { name: 'globalPriceAdjustment', in: 'query', schema: { type: 'number', minimum: 0.01 } },
+            { name: 'enableSelfHosted', in: 'query', schema: { type: 'boolean' } },
+            { name: 'enableStudentModels', in: 'query', schema: { type: 'boolean' } },
+            { name: 'includeScenario', in: 'query', schema: { type: 'boolean', default: false } },
+            { name: 'includeSensitivity', in: 'query', schema: { type: 'boolean', default: false } },
+          ],
+          responses: {
+            '200': { description: 'Calculated summary, domain breakdown, and 5-year forecast' },
+            '400': { description: 'Validation error' },
+          },
+        },
+      },
+      '/compare.json': {
+        get: {
+          summary: 'Browse-friendly 6-provider comparison for a given enterprise/maturity query',
+          parameters: [
+            { name: 'preset', in: 'query', schema: { type: 'string', enum: Object.keys(profiles) } },
+            { name: 'industry', in: 'query', schema: { type: 'string', enum: Object.keys(industries) } },
+            { name: 'maturity', in: 'query', schema: { type: 'integer', minimum: 0, maximum: 4 } },
+            {
+              name: 'forecastPreset',
+              in: 'query',
+              schema: { type: 'string', enum: Object.keys(forecastPresets) },
+            },
+          ],
+          responses: { '200': { description: 'Provider & strategy comparison matrix' } },
+        },
+      },
       '/api/health': {
         get: {
           summary: 'Health check and endpoint discovery',
@@ -499,11 +717,18 @@ export function getLlmsTxt(origin: string): string {
 Base URL: ${origin}
 OpenAPI Schema: ${origin}/openapi.json
 
-## Endpoints
+## Browse-friendly GET endpoints (recommended for web-browsing assistants like Gemini / ChatGPT Browse that restrict /api/*)
+- GET  ${origin}/presets.json
+- GET  ${origin}/scenarios.json
+- GET  ${origin}/compare.json?preset=Large&maturity=3
+- GET  ${origin}/estimate.json?preset=Large&maturity=3&pricePreset=AWS+Bedrock+(Claude+5.5)&forecastPreset=Rapid+commoditisation
+
+## Full REST API Endpoints
 - GET  /api/health
 - GET  /api/presets
 - GET  /api/calculate?preset=Large&maturity=3&pricePreset=AWS+Bedrock+(Claude+5.5)
 - POST /api/calculate
+- GET  /api/compare?preset=Large&maturity=3
 - POST /api/compare
 
 ## Valid Preset Values
@@ -515,15 +740,14 @@ OpenAPI Schema: ${origin}/openapi.json
 - forecastPreset: ${Object.keys(forecastPresets).join(' | ')}
 
 ## Examples
-curl -s "${origin}/api/presets"
+curl -s "${origin}/presets.json"
+curl -s "${origin}/scenarios.json"
+curl -s "${origin}/compare.json?preset=Large&maturity=3"
+curl -s "${origin}/estimate.json?preset=Large&maturity=3&pricePreset=AWS+Bedrock+(Claude+5.5)"
 
 curl -s -X POST "${origin}/api/calculate" \\
   -H "Content-Type: application/json" \\
   -d '{"preset":"Large","maturity":3,"pricePreset":"AWS Bedrock (Claude 5.5)","includeScenario":false}'
-
-curl -s -X POST "${origin}/api/compare" \\
-  -H "Content-Type: application/json" \\
-  -d '{}'
 
 ## Browser WebMCP
 When opened in a WebMCP-enabled browser, the page also registers:
