@@ -7,6 +7,7 @@
     "test": "vitest run",
     "dev": "vite --host",
     "build": "tsc -b && vite build",
+    "build:pages": "VITE_BASE_PATH=/aitco/ VITE_PAGES_STATIC=1 npm run build",
     "preview": "vite preview --host",
     "deploy": "npm run build && wrangler deploy",
     "test:e2e": "playwright test"
